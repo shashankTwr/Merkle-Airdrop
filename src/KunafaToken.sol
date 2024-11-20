@@ -9,7 +9,7 @@ contract KunafaToken is ERC20, Ownable {
     error KunafaToken__ExceedsBalance();
     error KunafaToken__ZeroAddress();
 
-    constructor() ERC20("KunafaToken", "KUNA") Ownable(msg.sender) {}
+    constructor() ERC20("KunafaToken", "KUNA") Ownable(msg.sender) {} // msg.sender for foundryup and empty constructor for foundry-zkSync
 
     function mint(address _to, uint256 _amount) external onlyOwner returns (bool) {
         if (_to == address(0)) revert KunafaToken__ZeroAddress();

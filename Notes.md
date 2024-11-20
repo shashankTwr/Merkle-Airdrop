@@ -14,7 +14,7 @@
 1:05:20:20 Transaction types
 1:05:39:49 Implementing signature verification
 1:05:48:03 Modifying the tests
-1:05:51:57 Testing on zkSync(optional)
+1:05:53:38 Claiming Script
 
 
 ## EIP 191

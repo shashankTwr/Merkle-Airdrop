@@ -80,7 +80,7 @@ contract MerkleAirdrop is EIP712 {
         pure
         returns (bool)
     {
-        (address actualSigner,,) = ECDSA.tryRecover(digest, v, r, s);
+        (address actualSigner,,) = ECDSA.tryRecover(digest, v, r, s); // 2 comma for normal foundry, 1 for foundryZksync
         return actualSigner == account;
     }
 }
