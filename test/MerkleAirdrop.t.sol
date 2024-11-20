@@ -5,10 +5,9 @@ import {KunafaToken} from "../src/KunafaToken.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {MerkleAirdrop} from "../src/MerkleAirdrop.sol";
 import {DeployMerkleAirdrop} from "../script/DeployMerkleAirdrop.s.sol";
+import {ZKSyncChainChecker} from "lib/foundry-devops/src/ZkSyncChainChecker.sol";
 
-
-contract MerkleAirdropTest is Test {
-
+contract MerkleAirdropTest is ZKSyncChainChecker, Test {
     KunafaToken public kuna;
     MerkleAirdrop public merkleAirdrop;
     DeployMerkleAirdrop public deployer;
@@ -20,30 +19,33 @@ contract MerkleAirdropTest is Test {
     bytes32 proof2 = 0xe5ebd1e1b5a5478a944ecab36a9a954ac3b6b8216875f6524caa7a1d87096576;
     bytes32[] public proof = [proof1, proof2];
 
-    uint256 public AMOUNT_TO_CLAIM= 25*1e18;
-    uint256 public AMOUNT_TO_SEND= AMOUNT_TO_CLAIM * 4;
+    uint256 public amountToClaim = 25 * 1e18;
+    uint256 public amountToSend = amountToClaim * 4;
 
     address user;
     uint256 userPrivateKey;
 
-    function setUp() public{
-        
-        kuna = new KunafaToken();
-        merkleAirdrop = new MerkleAirdrop(merkleRoot, kuna);
-        kuna.mint(kuna.owner(), AMOUNT_TO_SEND); // mints AMOUNT_TO_SEND kuna
-        kuna.transfer(address(merkleAirdrop), AMOUNT_TO_SEND); // transfer all the minted amount to the airdrop contract
-        deployer = new DeployMerkleAirdrop();
+    function setUp() public {
+        if (!isZkSyncChain()) {
+            // deploy with the script
+            deployer = new DeployMerkleAirdrop();
+            (merkleAirdrop, kuna) = deployer.run();
+        } else {
+            kuna = new KunafaToken();
+            merkleAirdrop = new MerkleAirdrop(merkleRoot, IERC20(kuna));
+            kuna.mint(kuna.owner(), amountToSend); // mints amountToSend kuna
+            kuna.transfer(address(merkleAirdrop), amountToSend); // transfer all the minted amount to the airdrop contract
+        }
         (user, userPrivateKey) = makeAddrAndKey("user");
     }
-
 
     function testUsersCanClaim() public {
         uint256 startingBalance = kuna.balanceOf(user);
 
         vm.prank(user);
-        merkleAirdrop.claim(user, AMOUNT_TO_CLAIM, proof);
+        merkleAirdrop.claim(user, amountToClaim, proof);
 
         uint256 endingBalance = kuna.balanceOf(user);
-        assertEq(endingBalance, startingBalance + AMOUNT_TO_CLAIM);
+        assertEq(endingBalance, startingBalance + amountToClaim);
     }
 }
