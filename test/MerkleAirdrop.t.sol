@@ -5,9 +5,10 @@ import {KunafaToken} from "../src/KunafaToken.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {MerkleAirdrop} from "../src/MerkleAirdrop.sol";
 import {DeployMerkleAirdrop} from "../script/DeployMerkleAirdrop.s.sol";
-import {ZKSyncChainChecker} from "lib/foundry-devops/src/ZkSyncChainChecker.sol";
+import {ZkSyncChainChecker} from "lib/foundry-devops/src/ZkSyncChainChecker.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract MerkleAirdropTest is ZKSyncChainChecker, Test {
+contract MerkleAirdropTest is ZkSyncChainChecker, Test {
     KunafaToken public kuna;
     MerkleAirdrop public merkleAirdrop;
     DeployMerkleAirdrop public deployer;
@@ -25,6 +26,8 @@ contract MerkleAirdropTest is ZKSyncChainChecker, Test {
     address user;
     uint256 userPrivateKey;
 
+    address public gasPayer;
+
     function setUp() public {
         if (!isZkSyncChain()) {
             // deploy with the script
@@ -37,15 +40,25 @@ contract MerkleAirdropTest is ZKSyncChainChecker, Test {
             kuna.transfer(address(merkleAirdrop), amountToSend); // transfer all the minted amount to the airdrop contract
         }
         (user, userPrivateKey) = makeAddrAndKey("user");
+        gasPayer = makeAddr("gasPayer");
     }
 
     function testUsersCanClaim() public {
         uint256 startingBalance = kuna.balanceOf(user);
+        console.log("startingBalance", startingBalance);
+        bytes32 digest = merkleAirdrop.getMessageHash(user, amountToClaim);
+        vm.startPrank(user);
+        // sign a message
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, digest);
+        // we actually don't need to prank the User here i think because we have the userPrivateKey
+        vm.stopPrank();
 
-        vm.prank(user);
-        merkleAirdrop.claim(user, amountToClaim, proof);
+        // gasPayer calls claim using the signed message
+        vm.prank(gasPayer);
+        merkleAirdrop.claim(user, amountToClaim, proof, v, r, s);
 
         uint256 endingBalance = kuna.balanceOf(user);
+        console.log("Ending Balance of User", endingBalance);
         assertEq(endingBalance, startingBalance + amountToClaim);
     }
 }
